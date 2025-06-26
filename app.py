@@ -14,47 +14,106 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizado
+# CSS personalizado compatible con modo oscuro
 st.markdown("""
 <style>
+    /* Variables para modo claro y oscuro */
+    :root {
+        --primary-color: #1f77b4;
+        --text-color: #262730;
+        --bg-color: #ffffff;
+        --secondary-bg: #f0f2f6;
+        --card-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-bg: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --warning-bg: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --info-bg: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    }
+    
+    /* Modo oscuro */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --text-color: #ffffff;
+            --bg-color: #0e1117;
+            --secondary-bg: #262730;
+            --info-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+        }
+    }
+    
+    /* Detectar modo oscuro de Streamlit */
+    [data-theme="dark"] {
+        --text-color: #ffffff;
+        --bg-color: #0e1117;
+        --secondary-bg: #262730;
+        --info-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    }
+    
     .main-header {
         font-size: 3rem;
-        color: #1f77b4;
+        color: var(--primary-color);
         text-align: center;
         margin-bottom: 2rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--card-bg);
         padding: 1rem;
         border-radius: 10px;
-        color: white;
+        color: white !important;
         text-align: center;
         margin: 0.5rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-card h1, .metric-card h2, .metric-card h3 {
+        color: white !important;
+        margin: 0.2rem 0;
     }
     
     .success-box {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        background: var(--success-bg);
         padding: 1rem;
         border-radius: 10px;
-        color: white;
+        color: white !important;
         margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .success-box strong {
+        color: white !important;
     }
     
     .warning-box {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        background: var(--warning-bg);
         padding: 1rem;
         border-radius: 10px;
-        color: white;
+        color: white !important;
         margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .warning-box strong {
+        color: white !important;
     }
     
     .info-box {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        background: var(--info-bg);
         padding: 1rem;
         border-radius: 10px;
         margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        color: var(--text-color);
+    }
+    
+    /* Modo oscuro específico para info-box */
+    @media (prefers-color-scheme: dark) {
+        .info-box {
+            color: #ffffff;
+        }
+    }
+    
+    [data-theme="dark"] .info-box {
+        color: #ffffff;
     }
     
     .stTabs [data-baseweb="tab-list"] {
@@ -65,13 +124,50 @@ st.markdown("""
         height: 50px;
         padding-left: 20px;
         padding-right: 20px;
-        background-color: #f0f2f6;
+        background-color: var(--secondary-bg);
         border-radius: 10px 10px 0px 0px;
+        transition: all 0.3s ease;
     }
     
     .stTabs [aria-selected="true"] {
-        background-color: #1f77b4;
-        color: white;
+        background-color: var(--primary-color) !important;
+        color: white !important;
+    }
+    
+    /* Mejorar contraste en modo oscuro */
+    @media (prefers-color-scheme: dark) {
+        .stSelectbox > div > div {
+            background-color: #262730;
+            color: #ffffff;
+        }
+        
+        .stButton > button {
+            background-color: #262730;
+            color: #ffffff;
+            border: 1px solid #4a5568;
+        }
+        
+        .stButton > button:hover {
+            background-color: #4a5568;
+            border-color: #667eea;
+        }
+    }
+    
+    /* Asegurar que los elementos de Streamlit respeten el modo oscuro */
+    [data-theme="dark"] .stSelectbox > div > div {
+        background-color: #262730;
+        color: #ffffff;
+    }
+    
+    [data-theme="dark"] .stButton > button {
+        background-color: #262730;
+        color: #ffffff;
+        border: 1px solid #4a5568;
+    }
+    
+    [data-theme="dark"] .stButton > button:hover {
+        background-color: #4a5568;
+        border-color: #667eea;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -227,7 +323,9 @@ def create_contingency_heatmap(contingency_table, item1, item2):
             yaxis_title=item1,
             font=dict(size=14),
             height=400,
-            width=500
+            width=500,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
         )
         
         return fig
@@ -271,7 +369,9 @@ def create_metrics_chart(metrics, item1, item2):
             yaxis=dict(range=[0, 1]),
             font=dict(size=12),
             height=400,
-            showlegend=False
+            showlegend=False,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
         )
         
         return fig
@@ -313,7 +413,11 @@ def create_scatter_plot(data, item1, item2):
             }
         )
         
-        fig.update_layout(height=400)
+        fig.update_layout(
+            height=400,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
         fig.update_xaxes(range=[-0.3, 1.3], tickvals=[0, 1])
         fig.update_yaxes(range=[-0.3, 1.3], tickvals=[0, 1])
         
@@ -365,7 +469,9 @@ def create_chi_square_visualization(chi2_stat, critical_values):
             xaxis_title='Valor χ²',
             yaxis_title='Densidad',
             height=400,
-            showlegend=True
+            showlegend=True,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
         )
         
         return fig
@@ -387,7 +493,11 @@ def create_frequency_chart(data):
             color=freq_data.values,
             color_continuous_scale='viridis'
         )
-        fig.update_layout(height=400)
+        fig.update_layout(
+            height=400,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
         return fig
     
     except Exception as e:
@@ -831,3 +941,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
