@@ -620,39 +620,127 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                n_items = st.slider("Número de items", 2, 8, 4)
+                n_items = st.slider("Número de items", 2, 8, 4, key="manual_items")
             with col2:
-                n_instances = st.slider("Número de instancias", 5, 50, 10)
+                n_instances = st.slider("Número de instancias", 5, 50, 10, key="manual_instances")
             
-            if st.button("📝 Crear Tabla Manual"):
+            # Inicializar datos en session_state si no existen
+            if 'manual_data_initialized' not in st.session_state:
+                st.session_state.manual_data_initialized = False
+                st.session_state.manual_data = None
+            
+            # Crear tabla manual
+            if st.button("📝 Crear Tabla Manual", key="create_manual_table"):
                 items = [f"Item_{i+1}" for i in range(n_items)]
                 
-                # Crear formulario para entrada manual
-                with st.form("manual_data_form"):
-                    st.write("Ingresa los datos (0 o 1):")
+                # Inicializar datos vacíos
+                manual_data = []
+                for i in range(n_instances):
+                    row = [0] * n_items  # Inicializar con ceros
+                    manual_data.append(row)
+                
+                st.session_state.manual_data = {
+                    'data': manual_data,
+                    'items': items,
+                    'n_items': n_items,
+                    'n_instances': n_instances
+                }
+                st.session_state.manual_data_initialized = True
+                st.rerun()
+            
+            # Mostrar tabla para edición si está inicializada
+            if st.session_state.manual_data_initialized and st.session_state.manual_data:
+                st.subheader("✏️ Editar Datos")
+                
+                manual_info = st.session_state.manual_data
+                items = manual_info['items']
+                n_items = manual_info['n_items']
+                n_instances = manual_info['n_instances']
+                
+                # Crear formulario con datos editables
+                with st.form("manual_data_form", clear_on_submit=False):
+                    st.write("**Instrucciones:** Selecciona 0 o 1 para cada celda")
                     
-                    data = []
+                    # Crear tabla editable
+                    updated_data = []
+                    
+                    # Encabezados
+                    header_cols = st.columns([1] + [1] * n_items)
+                    header_cols[0].write("**Instancia**")
+                    for j, item in enumerate(items):
+                        header_cols[j+1].write(f"**{item}**")
+                    
+                    # Filas de datos
                     for i in range(n_instances):
-                        cols = st.columns(n_items + 1)
+                        cols = st.columns([1] + [1] * n_items)
                         cols[0].write(f"Inst {i+1}")
                         
                         row = []
                         for j in range(n_items):
+                            # Obtener valor actual o usar 0 por defecto
+                            current_value = manual_info['data'][i][j] if i < len(manual_info['data']) and j < len(manual_info['data'][i]) else 0
+                            
                             value = cols[j+1].selectbox(
-                                f"{items[j]}",
-                                [0, 1],
-                                key=f"item_{i}_{j}",
+                                f"",
+                                options=[0, 1],
+                                index=current_value,  # Usar valor actual como índice
+                                key=f"manual_item_{i}_{j}",
                                 label_visibility="collapsed"
                             )
                             row.append(value)
-                        data.append(row)
+                        updated_data.append(row)
                     
-                    if st.form_submit_button("💾 Guardar Datos", type="primary"):
-                        try:
-                            st.session_state.data = pd.DataFrame(data, columns=items)
-                            st.success("Datos guardados correctamente")
-                        except Exception as e:
-                            st.error(f"Error guardando datos: {str(e)}")
+                    # Botones del formulario
+                    col1, col2, col3 = st.columns([1, 1, 1])
+                    
+                    with col1:
+                        if st.form_submit_button("💾 Guardar Datos", type="primary"):
+                            try:
+                                # Crear DataFrame
+                                df = pd.DataFrame(updated_data, columns=items)
+                                st.session_state.data = df
+                                
+                                # Limpiar datos manuales
+                                st.session_state.manual_data_initialized = False
+                                st.session_state.manual_data = None
+                                
+                                st.success("✅ Datos guardados correctamente")
+                                st.rerun()
+                                
+                            except Exception as e:
+                                st.error(f"Error guardando datos: {str(e)}")
+                    
+                    with col2:
+                        if st.form_submit_button("🎲 Llenar Aleatoriamente"):
+                            try:
+                                # Llenar con datos aleatorios
+                                random_data = []
+                                for i in range(n_instances):
+                                    row = [random.choice([0, 1]) for _ in range(n_items)]
+                                    random_data.append(row)
+                                
+                                # Actualizar session_state
+                                st.session_state.manual_data['data'] = random_data
+                                st.success("🎲 Datos llenados aleatoriamente")
+                                st.rerun()
+                                
+                            except Exception as e:
+                                st.error(f"Error llenando datos: {str(e)}")
+                    
+                    with col3:
+                        if st.form_submit_button("🗑️ Cancelar"):
+                            st.session_state.manual_data_initialized = False
+                            st.session_state.manual_data = None
+                            st.rerun()
+            
+            # Mostrar vista previa de los datos actuales
+            if st.session_state.manual_data:
+                st.subheader("👀 Vista Previa")
+                preview_df = pd.DataFrame(
+                    st.session_state.manual_data['data'], 
+                    columns=st.session_state.manual_data['items']
+                )
+                st.dataframe(preview_df, use_container_width=True)
         
         # Mostrar datos cargados
         if st.session_state.data is not None:
