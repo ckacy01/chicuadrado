@@ -14,165 +14,191 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizado compatible con modo oscuro
+# JavaScript para detectar modo oscuro y aplicar estilos
+st.markdown("""
+<script>
+function applyThemeStyles() {
+    // Detectar si estamos en modo oscuro
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const streamlitDark = document.querySelector('[data-theme="dark"]') !== null;
+    const bodyDark = document.body.classList.contains('dark') || 
+                     getComputedStyle(document.body).backgroundColor === 'rgb(14, 17, 23)';
+    
+    const isActuallyDark = isDark || streamlitDark || bodyDark;
+    
+    // Aplicar clase al body
+    if (isActuallyDark) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+}
+
+// Ejecutar al cargar y cuando cambie el tema
+document.addEventListener('DOMContentLoaded', applyThemeStyles);
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(applyThemeStyles);
+}
+
+// Ejecutar periódicamente para detectar cambios de Streamlit
+setInterval(applyThemeStyles, 1000);
+</script>
+""", unsafe_allow_html=True)
+
+# CSS mejorado con detección de modo oscuro
 st.markdown("""
 <style>
-    /* Variables para modo claro y oscuro */
-    :root {
-        --primary-color: #1f77b4;
-        --text-color: #262730;
-        --bg-color: #ffffff;
-        --secondary-bg: #f0f2f6;
-        --card-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --success-bg: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --warning-bg: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        --info-bg: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    }
-    
-    /* Modo oscuro */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --text-color: #ffffff;
-            --bg-color: #0e1117;
-            --secondary-bg: #262730;
-            --info-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-        }
-    }
-    
-    /* Detectar modo oscuro de Streamlit */
-    [data-theme="dark"] {
-        --text-color: #ffffff;
-        --bg-color: #0e1117;
-        --secondary-bg: #262730;
-        --info-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-    }
-    
+    /* Estilos base */
     .main-header {
         font-size: 3rem;
-        color: var(--primary-color);
+        color: #1f77b4 !important;
         text-align: center;
         margin-bottom: 2rem;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     
+    /* Tarjetas de métricas - MODO CLARO */
     .metric-card {
-        background: var(--card-bg);
-        padding: 1rem;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        padding: 1rem !important;
+        border-radius: 10px !important;
         color: white !important;
-        text-align: center;
-        margin: 0.5rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center !important;
+        margin: 0.5rem 0 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
     }
     
-    .metric-card h1, .metric-card h2, .metric-card h3 {
+    .metric-card h1, 
+    .metric-card h2, 
+    .metric-card h3,
+    .metric-card * {
         color: white !important;
-        margin: 0.2rem 0;
+        margin: 0.2rem 0 !important;
     }
     
+    /* Cajas de éxito - MODO CLARO */
     .success-box {
-        background: var(--success-bg);
-        padding: 1rem;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+        padding: 1rem !important;
+        border-radius: 10px !important;
         color: white !important;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin: 1rem 0 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
     }
     
+    .success-box *,
     .success-box strong {
         color: white !important;
     }
     
+    /* Cajas de advertencia - MODO CLARO */
     .warning-box {
-        background: var(--warning-bg);
-        padding: 1rem;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+        padding: 1rem !important;
+        border-radius: 10px !important;
         color: white !important;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin: 1rem 0 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
     }
     
+    .warning-box *,
     .warning-box strong {
         color: white !important;
     }
     
+    /* Cajas de información - MODO CLARO */
     .info-box {
-        background: var(--info-bg);
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        color: var(--text-color);
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
+        padding: 1rem !important;
+        border-radius: 10px !important;
+        margin: 1rem 0 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+        color: #262730 !important;
     }
     
-    /* Modo oscuro específico para info-box */
+    .info-box * {
+        color: #262730 !important;
+    }
+    
+    /* MODO OSCURO - Detectado por JavaScript */
+    .dark-mode .info-box {
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
+        color: #ffffff !important;
+    }
+    
+    .dark-mode .info-box * {
+        color: #ffffff !important;
+    }
+    
+    /* Detección alternativa de modo oscuro por CSS */
     @media (prefers-color-scheme: dark) {
         .info-box {
-            color: #ffffff;
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
+            color: #ffffff !important;
+        }
+        
+        .info-box * {
+            color: #ffffff !important;
         }
     }
     
+    /* Detección por atributo de Streamlit */
     [data-theme="dark"] .info-box {
-        color: #ffffff;
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
+        color: #ffffff !important;
     }
     
+    [data-theme="dark"] .info-box * {
+        color: #ffffff !important;
+    }
+    
+    /* Detección por color de fondo del body */
+    body[style*="rgb(14, 17, 23)"] .info-box,
+    body[style*="background-color: rgb(14, 17, 23)"] .info-box {
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
+        color: #ffffff !important;
+    }
+    
+    body[style*="rgb(14, 17, 23)"] .info-box *,
+    body[style*="background-color: rgb(14, 17, 23)"] .info-box * {
+        color: #ffffff !important;
+    }
+    
+    /* Pestañas */
     .stTabs [data-baseweb="tab-list"] {
         gap: 2px;
     }
     
     .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        padding-left: 20px;
-        padding-right: 20px;
-        background-color: var(--secondary-bg);
-        border-radius: 10px 10px 0px 0px;
-        transition: all 0.3s ease;
+        height: 50px !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        border-radius: 10px 10px 0px 0px !important;
+        transition: all 0.3s ease !important;
     }
     
     .stTabs [aria-selected="true"] {
-        background-color: var(--primary-color) !important;
+        background-color: #1f77b4 !important;
         color: white !important;
     }
     
-    /* Mejorar contraste en modo oscuro */
-    @media (prefers-color-scheme: dark) {
-        .stSelectbox > div > div {
-            background-color: #262730;
-            color: #ffffff;
-        }
-        
-        .stButton > button {
-            background-color: #262730;
-            color: #ffffff;
-            border: 1px solid #4a5568;
-        }
-        
-        .stButton > button:hover {
-            background-color: #4a5568;
-            border-color: #667eea;
-        }
+    /* Forzar estilos en elementos específicos de Streamlit */
+    div[data-testid="metric-container"] {
+        background: transparent !important;
     }
     
-    /* Asegurar que los elementos de Streamlit respeten el modo oscuro */
-    [data-theme="dark"] .stSelectbox > div > div {
-        background-color: #262730;
-        color: #ffffff;
+    /* Asegurar que los gráficos tengan fondo transparente */
+    .js-plotly-plot {
+        background: transparent !important;
     }
     
-    [data-theme="dark"] .stButton > button {
-        background-color: #262730;
-        color: #ffffff;
-        border: 1px solid #4a5568;
-    }
-    
-    [data-theme="dark"] .stButton > button:hover {
-        background-color: #4a5568;
-        border-color: #667eea;
+    .plotly {
+        background: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Funciones auxiliares
+# Funciones auxiliares (mantener las mismas)
 @st.cache_data
 def generate_sample_data(n_items=6, n_instances=100, seed=42):
     """Genera datos de ejemplo con correlaciones realistas"""
@@ -570,7 +596,7 @@ def main():
                             data[col] = (data[col] > 0).astype(int)
                     
                     st.session_state.data = data
-                    st.markdown('<div class="success-box">✅ Datos cargados correctamente</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="success-box"><strong>✅ Datos cargados correctamente</strong></div>', unsafe_allow_html=True)
                     
                 except Exception as e:
                     st.error(f"Error al cargar el archivo: {str(e)}")
@@ -586,7 +612,7 @@ def main():
             if st.button("🎲 Generar Datos", type="primary"):
                 try:
                     st.session_state.data = generate_sample_data(n_items, n_instances)
-                    st.markdown('<div class="success-box">✅ Datos generados correctamente</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="success-box"><strong>✅ Datos generados correctamente</strong></div>', unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Error generando datos: {str(e)}")
         
@@ -655,7 +681,7 @@ def main():
         st.header("Análisis de Asociación")
         
         if st.session_state.data is None:
-            st.markdown('<div class="warning-box">⚠️ Primero debes cargar datos en la pestaña "Carga de Datos"</div>', unsafe_allow_html=True)
+            st.markdown('<div class="warning-box"><strong>⚠️ Primero debes cargar datos en la pestaña "Carga de Datos"</strong></div>', unsafe_allow_html=True)
         else:
             # Validar datos antes del análisis
             is_valid, message = validate_data(st.session_state.data)
@@ -797,7 +823,7 @@ def main():
         st.header("Visualizaciones")
         
         if st.session_state.current_metrics is None:
-            st.markdown('<div class="warning-box">⚠️ Primero debes realizar un análisis en la pestaña "Análisis"</div>', unsafe_allow_html=True)
+            st.markdown('<div class="warning-box"><strong>⚠️ Primero debes realizar un análisis en la pestaña "Análisis"</strong></div>', unsafe_allow_html=True)
         else:
             metrics = st.session_state.current_metrics
             item1, item2 = st.session_state.current_items
@@ -831,7 +857,7 @@ def main():
         st.header("Reporte Completo")
         
         if st.session_state.current_metrics is None:
-            st.markdown('<div class="warning-box">⚠️ Primero debes realizar un análisis en la pestaña "Análisis"</div>', unsafe_allow_html=True)
+            st.markdown('<div class="warning-box"><strong>⚠️ Primero debes realizar un análisis en la pestaña "Análisis"</strong></div>', unsafe_allow_html=True)
         else:
             metrics = st.session_state.current_metrics
             item1, item2 = st.session_state.current_items
