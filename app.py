@@ -14,38 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# JavaScript para detectar modo oscuro y aplicar estilos
-st.markdown("""
-<script>
-function applyThemeStyles() {
-    // Detectar si estamos en modo oscuro
-    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const streamlitDark = document.querySelector('[data-theme="dark"]') !== null;
-    const bodyDark = document.body.classList.contains('dark') || 
-                     getComputedStyle(document.body).backgroundColor === 'rgb(14, 17, 23)';
-    
-    const isActuallyDark = isDark || streamlitDark || bodyDark;
-    
-    // Aplicar clase al body
-    if (isActuallyDark) {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
-}
-
-// Ejecutar al cargar y cuando cambie el tema
-document.addEventListener('DOMContentLoaded', applyThemeStyles);
-if (window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(applyThemeStyles);
-}
-
-// Ejecutar periódicamente para detectar cambios de Streamlit
-setInterval(applyThemeStyles, 1000);
-</script>
-""", unsafe_allow_html=True)
-
-# CSS mejorado con detección de modo oscuro
+# CSS mejorado SIN los divs problemáticos
 st.markdown("""
 <style>
     /* Estilos base */
@@ -106,62 +75,11 @@ st.markdown("""
         color: white !important;
     }
     
-    /* Cajas de información - MODO CLARO */
-    .info-box {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
-        padding: 1rem !important;
-        border-radius: 10px !important;
-        margin: 1rem 0 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-        color: #262730 !important;
-    }
-    
-    .info-box * {
-        color: #262730 !important;
-    }
-    
-    /* MODO OSCURO - Detectado por JavaScript */
-    .dark-mode .info-box {
-        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
-        color: #ffffff !important;
-    }
-    
-    .dark-mode .info-box * {
-        color: #ffffff !important;
-    }
-    
-    /* Detección alternativa de modo oscuro por CSS */
+    /* MODO OSCURO - Detección automática */
     @media (prefers-color-scheme: dark) {
-        .info-box {
-            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
-            color: #ffffff !important;
+        .main-header {
+            color: #4fc3f7 !important;
         }
-        
-        .info-box * {
-            color: #ffffff !important;
-        }
-    }
-    
-    /* Detección por atributo de Streamlit */
-    [data-theme="dark"] .info-box {
-        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
-        color: #ffffff !important;
-    }
-    
-    [data-theme="dark"] .info-box * {
-        color: #ffffff !important;
-    }
-    
-    /* Detección por color de fondo del body */
-    body[style*="rgb(14, 17, 23)"] .info-box,
-    body[style*="background-color: rgb(14, 17, 23)"] .info-box {
-        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
-        color: #ffffff !important;
-    }
-    
-    body[style*="rgb(14, 17, 23)"] .info-box *,
-    body[style*="background-color: rgb(14, 17, 23)"] .info-box * {
-        color: #ffffff !important;
     }
     
     /* Pestañas */
@@ -180,11 +98,6 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background-color: #1f77b4 !important;
         color: white !important;
-    }
-    
-    /* Forzar estilos en elementos específicos de Streamlit */
-    div[data-testid="metric-container"] {
-        background: transparent !important;
     }
     
     /* Asegurar que los gráficos tengan fondo transparente */
@@ -252,6 +165,127 @@ def validate_data(data):
     
     return True, "Datos válidos"
 
+def calculate_dependency_factors(a, b, c, d, n):
+    """
+    Calcula los 4 factores de dependencia usando la fórmula: FD = P(A∩B) / (P(A) × P(B))
+    
+    Tabla de contingencia:
+                Item2=0    Item2=1    Total
+    Item1=0        d         c        c+d
+    Item1=1        b         a        a+b
+    Total        b+d       a+c        n
+    
+    Donde:
+    - a = Item1=1 ∩ Item2=1
+    - b = Item1=1 ∩ Item2=0  
+    - c = Item1=0 ∩ Item2=1
+    - d = Item1=0 ∩ Item2=0
+    """
+    
+    if n == 0:
+        return {
+            'fd_1_1': 0, 'fd_1_0': 0, 'fd_0_1': 0, 'fd_0_0': 0,
+            'probabilities': {}, 'formulas': {}, 'contingency_mapping': {}
+        }
+    
+    # Calcular probabilidades marginales
+    p_item1_1 = (a + b) / n  # P(Item1=1)
+    p_item1_0 = (c + d) / n  # P(Item1=0)
+    p_item2_1 = (a + c) / n  # P(Item2=1)
+    p_item2_0 = (b + d) / n  # P(Item2=0)
+    
+    # Calcular probabilidades conjuntas
+    p_both_1_1 = a / n  # P(Item1=1 ∩ Item2=1)
+    p_1_0 = b / n        # P(Item1=1 ∩ Item2=0)
+    p_0_1 = c / n        # P(Item1=0 ∩ Item2=1)
+    p_both_0_0 = d / n   # P(Item1=0 ∩ Item2=0)
+    
+    # Calcular factores de dependencia: FD = P(A∩B) / (P(A) × P(B))
+    # CORRECCIÓN: Usar exactamente la fórmula de la imagen
+    fd_1_1 = p_both_1_1 / (p_item1_1 * p_item2_1) if (p_item1_1 * p_item2_1) > 0 else 0
+    fd_1_0 = p_1_0 / (p_item1_1 * p_item2_0) if (p_item1_1 * p_item2_0) > 0 else 0
+    fd_0_1 = p_0_1 / (p_item1_0 * p_item2_1) if (p_item1_0 * p_item2_1) > 0 else 0
+    fd_0_0 = p_both_0_0 / (p_item1_0 * p_item2_0) if (p_item1_0 * p_item2_0) > 0 else 0
+    
+    return {
+        'fd_1_1': fd_1_1,  # Item1=1, Item2=1
+        'fd_1_0': fd_1_0,  # Item1=1, Item2=0
+        'fd_0_1': fd_0_1,  # Item1=0, Item2=1
+        'fd_0_0': fd_0_0,  # Item1=0, Item2=0
+        'probabilities': {
+            'p_item1_1': p_item1_1,
+            'p_item1_0': p_item1_0,
+            'p_item2_1': p_item2_1,
+            'p_item2_0': p_item2_0,
+            'p_both_1_1': p_both_1_1,
+            'p_1_0': p_1_0,
+            'p_0_1': p_0_1,
+            'p_both_0_0': p_both_0_0
+        },
+        'formulas': {
+            'fd_1_1_formula': f"{p_both_1_1:.3f} / ({p_item1_1:.3f} × {p_item2_1:.3f})",
+            'fd_1_0_formula': f"{p_1_0:.3f} / ({p_item1_1:.3f} × {p_item2_0:.3f})",
+            'fd_0_1_formula': f"{p_0_1:.3f} / ({p_item1_0:.3f} × {p_item2_1:.3f})",
+            'fd_0_0_formula': f"{p_both_0_0:.3f} / ({p_item1_0:.3f} × {p_item2_0:.3f})"
+        },
+        'contingency_mapping': {
+            'a': a,  # Item1=1, Item2=1
+            'b': b,  # Item1=1, Item2=0
+            'c': c,  # Item1=0, Item2=1
+            'd': d   # Item1=0, Item2=0
+        },
+        'verification': {
+            'example_calculation': f"FD(1,1) = P(1∩1)/[P(1)×P(1)] = ({a}/{n}) / [({a+b}/{n}) × ({a+c}/{n})] = {p_both_1_1:.3f} / ({p_item1_1:.3f} × {p_item2_1:.3f}) = {fd_1_1:.3f}"
+        }
+    }
+
+def interpret_dependency_factors(fd_results, item1, item2):
+    """Genera interpretaciones contextuales de los factores de dependencia"""
+    interpretations = []
+    
+    fd_1_1 = fd_results['fd_1_1']
+    fd_1_0 = fd_results['fd_1_0']
+    fd_0_1 = fd_results['fd_0_1']
+    fd_0_0 = fd_results['fd_0_0']
+    
+    # Interpretación principal
+    if fd_0_1 > fd_1_1:
+        if fd_0_1 > 1.2:
+            interpretations.append(f"📈 **Comprar {item2} disminuye la compra de {item1}** (FD(~{item1}|{item2}) = {fd_0_1:.3f} > FD({item1}|{item2}) = {fd_1_1:.3f})")
+        else:
+            interpretations.append(f"⚠️ **Comprar {item2} tiende a disminuir la compra de {item1}** (FD(~{item1}|{item2}) = {fd_0_1:.3f})")
+    elif fd_1_1 > fd_0_1:
+        if fd_1_1 > 1.2:
+            interpretations.append(f"📈 **Comprar {item2} aumenta la compra de {item1}** (FD({item1}|{item2}) = {fd_1_1:.3f} > FD(~{item1}|{item2}) = {fd_0_1:.3f})")
+        else:
+            interpretations.append(f"✅ **Comprar {item2} tiende a aumentar la compra de {item1}** (FD({item1}|{item2}) = {fd_1_1:.3f})")
+    else:
+        interpretations.append(f"⚪ **Comprar {item2} no afecta significativamente la compra de {item1}** (FD ≈ {fd_1_1:.3f})")
+    
+    # Interpretación secundaria
+    if fd_0_0 > fd_1_0:
+        interpretations.append(f"📉 **NO comprar {item2} disminuye la compra de {item1}** (FD(~{item1}|~{item2}) = {fd_0_0:.3f} > FD({item1}|~{item2}) = {fd_1_0:.3f})")
+    elif fd_1_0 > fd_0_0:
+        interpretations.append(f"📈 **NO comprar {item2} aumenta la compra de {item1}** (FD({item1}|~{item2}) = {fd_1_0:.3f} > FD(~{item1}|~{item2}) = {fd_0_0:.3f})")
+    
+    # Análisis detallado
+    interpretations.append("---")
+    interpretations.append("**Análisis detallado por celda:**")
+    
+    if fd_1_1 > 1.2:
+        interpretations.append(f"✅ **Fuerte asociación positiva** entre {item1}=1 y {item2}=1 (FD = {fd_1_1:.3f})")
+    elif fd_1_1 < 0.8:
+        interpretations.append(f"❌ **Asociación negativa** entre {item1}=1 y {item2}=1 (FD = {fd_1_1:.3f})")
+    else:
+        interpretations.append(f"⚪ **Independencia** entre {item1}=1 y {item2}=1 (FD = {fd_1_1:.3f})")
+    
+    if fd_0_1 > 1.2:
+        interpretations.append(f"⚠️ **Cuando se compra {item2}, es más probable NO comprar {item1}** (FD = {fd_0_1:.3f})")
+    elif fd_0_1 < 0.8:
+        interpretations.append(f"✅ **Cuando se compra {item2}, es menos probable NO comprar {item1}** (FD = {fd_0_1:.3f})")
+    
+    return interpretations
+
 def calculate_metrics(data, item1, item2):
     """Calcula todas las métricas de asociación con manejo de errores"""
     try:
@@ -275,23 +309,29 @@ def calculate_metrics(data, item1, item2):
             contingency = full_contingency
         
         # Extraer valores de forma segura
-        a = contingency.iloc[1, 1] if contingency.shape[0] > 1 and contingency.shape[1] > 1 else 0  # ambos = 1
-        b = contingency.iloc[1, 0] if contingency.shape[0] > 1 else 0  # item1=1, item2=0
-        c = contingency.iloc[0, 1] if contingency.shape[1] > 1 else 0  # item1=0, item2=1
-        d = contingency.iloc[0, 0] if contingency.shape[0] > 0 else 0  # ambos = 0
-        n = contingency.iloc[-1, -1]  # total
+        a = contingency.iloc[1, 1] if contingency.shape[0] > 1 and contingency.shape[1] > 1 else 0
+        b = contingency.iloc[1, 0] if contingency.shape[0] > 1 else 0
+        c = contingency.iloc[0, 1] if contingency.shape[1] > 1 else 0
+        d = contingency.iloc[0, 0] if contingency.shape[0] > 0 else 0
+        n = contingency.iloc[-1, -1]
         
-        # Calcular métricas con división segura
+        # Calcular métricas básicas
         conf_1_to_2 = a / (a + b) if (a + b) > 0 else 0
         conf_2_to_1 = a / (a + c) if (a + c) > 0 else 0
         cov_1 = (a + b) / n if n > 0 else 0
         cov_2 = (a + c) / n if n > 0 else 0
         
-        # Factor de dependencia
+        # Factor de dependencia ANTIGUO
         expected_a = (a + b) * (a + c) / n if n > 0 else 0
-        dependency_factor = (a - expected_a) / expected_a if expected_a > 0 else 0
+        dependency_factor_old = (a - expected_a) / expected_a if expected_a > 0 else 0
         
-        # Chi-cuadrado con verificación de denominador
+        # NUEVOS Factores de dependencia
+        dependency_factors = calculate_dependency_factors(a, b, c, d, n)
+        
+        # Interpretaciones contextuales
+        interpretations = interpret_dependency_factors(dependency_factors, item1, item2)
+        
+        # Chi-cuadrado
         denominator = (a + b) * (c + d) * (a + c) * (b + d)
         chi2_stat = n * (a * d - b * c) ** 2 / denominator if denominator > 0 else 0
         
@@ -308,6 +348,9 @@ def calculate_metrics(data, item1, item2):
             if chi2_stat > critical:
                 significance.append(level)
         
+        # Todas las reglas de asociación
+        all_rules = calculate_all_association_rules(a, b, c, d, n, item1, item2)
+        
         return {
             'contingency': contingency,
             'a': int(a), 'b': int(b), 'c': int(c), 'd': int(d), 'n': int(n),
@@ -315,20 +358,119 @@ def calculate_metrics(data, item1, item2):
             'conf_2_to_1': float(conf_2_to_1),
             'cov_1': float(cov_1),
             'cov_2': float(cov_2),
-            'dependency_factor': float(dependency_factor),
+            'dependency_factor': float(dependency_factor_old),
+            'dependency_factors': dependency_factors,
+            'dependency_interpretations': interpretations,
             'chi2_stat': float(chi2_stat),
             'critical_values': critical_values,
-            'significance': significance
+            'significance': significance,
+            'all_rules': all_rules
         }
     
     except Exception as e:
         st.error(f"Error calculando métricas: {str(e)}")
         return None
 
+def calculate_all_association_rules(a, b, c, d, n, item1, item2):
+    """Calcula todas las 8 reglas de asociación posibles"""
+    
+    rules = []
+    
+    # Reglas para item1 → item2
+    cb_1_1 = a / n if n > 0 else 0
+    cf_1_1 = a / (a + b) if (a + b) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item1}=1) Entonces {item2}=1',
+        'coverage': cb_1_1,
+        'confidence': cf_1_1,
+        'support': a,
+        'total': a + b,
+        'formula': f'({a}/{a + b})' if (a + b) > 0 else '(0/0)'
+    })
+    
+    cb_1_0 = b / n if n > 0 else 0
+    cf_1_0 = b / (a + b) if (a + b) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item1}=1) Entonces {item2}=0',
+        'coverage': cb_1_0,
+        'confidence': cf_1_0,
+        'support': b,
+        'total': a + b,
+        'formula': f'({b}/{a + b})' if (a + b) > 0 else '(0/0)'
+    })
+    
+    cb_0_1 = c / n if n > 0 else 0
+    cf_0_1 = c / (c + d) if (c + d) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item1}=0) Entonces {item2}=1',
+        'coverage': cb_0_1,
+        'confidence': cf_0_1,
+        'support': c,
+        'total': c + d,
+        'formula': f'({c}/{c + d})' if (c + d) > 0 else '(0/0)'
+    })
+    
+    cb_0_0 = d / n if n > 0 else 0
+    cf_0_0 = d / (c + d) if (c + d) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item1}=0) Entonces {item2}=0',
+        'coverage': cb_0_0,
+        'confidence': cf_0_0,
+        'support': d,
+        'total': c + d,
+        'formula': f'({d}/{c + d})' if (c + d) > 0 else '(0/0)'
+    })
+    
+    # Reglas para item2 → item1
+    cb_2_1 = a / n if n > 0 else 0
+    cf_2_1 = a / (a + c) if (a + c) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item2}=1) Entonces {item1}=1',
+        'coverage': cb_2_1,
+        'confidence': cf_2_1,
+        'support': a,
+        'total': a + c,
+        'formula': f'({a}/{a + c})' if (a + c) > 0 else '(0/0)'
+    })
+    
+    cb_2_0 = c / n if n > 0 else 0
+    cf_2_0 = c / (a + c) if (a + c) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item2}=1) Entonces {item1}=0',
+        'coverage': cb_2_0,
+        'confidence': cf_2_0,
+        'support': c,
+        'total': a + c,
+        'formula': f'({c}/{a + c})' if (a + c) > 0 else '(0/0)'
+    })
+    
+    cb_0_2 = b / n if n > 0 else 0
+    cf_0_2 = b / (b + d) if (b + d) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item2}=0) Entonces {item1}=1',
+        'coverage': cb_0_2,
+        'confidence': cf_0_2,
+        'support': b,
+        'total': b + d,
+        'formula': f'({b}/{b + d})' if (b + d) > 0 else '(0/0)'
+    })
+    
+    cb_0_0_2 = d / n if n > 0 else 0
+    cf_0_0_2 = d / (b + d) if (b + d) > 0 else 0
+    rules.append({
+        'rule': f'Si ({item2}=0) Entonces {item1}=0',
+        'coverage': cb_0_0_2,
+        'confidence': cf_0_0_2,
+        'support': d,
+        'total': b + d,
+        'formula': f'({d}/{b + d})' if (b + d) > 0 else '(0/0)'
+    })
+    
+    return rules
+
 def create_contingency_heatmap(contingency_table, item1, item2):
     """Crea heatmap de la tabla de contingencia"""
     try:
-        # Preparar datos sin totales
         data_matrix = contingency_table.iloc[:-1, :-1].values
         
         fig = go.Figure(data=go.Heatmap(
@@ -406,15 +548,115 @@ def create_metrics_chart(metrics, item1, item2):
         st.error(f"Error creando gráfico de métricas: {str(e)}")
         return go.Figure()
 
+def create_dependency_factors_chart(dependency_factors, item1, item2):
+    """Crea gráfico con los 4 factores de dependencia - CORREGIDO"""
+    try:
+        # CORRECCIÓN: Organizar según la tabla de contingencia estándar
+        categories = [
+            f'{item1}=1<br>{item2}=1',  # a
+            f'{item1}=1<br>{item2}=0',  # b
+            f'{item1}=0<br>{item2}=1',  # c
+            f'{item1}=0<br>{item2}=0'   # d
+        ]
+        
+        values = [
+            dependency_factors['fd_1_1'],  # a: Item1=1, Item2=1
+            dependency_factors['fd_1_0'],  # b: Item1=1, Item2=0
+            dependency_factors['fd_0_1'],  # c: Item1=0, Item2=1
+            dependency_factors['fd_0_0']   # d: Item1=0, Item2=0
+        ]
+        
+        colors = []
+        for val in values:
+            if val > 1.2:
+                colors.append('#4CAF50')  # Verde - Asociación positiva fuerte
+            elif val < 0.8:
+                colors.append('#F44336')  # Rojo - Asociación negativa fuerte
+            else:
+                colors.append('#9E9E9E')  # Gris - Independencia
+        
+        fig = go.Figure(data=[
+            go.Bar(
+                x=categories,
+                y=values,
+                marker_color=colors,
+                text=[f'{v:.3f}' for v in values],
+                textposition='auto',
+            )
+        ])
+        
+        fig.add_hline(y=1, line_dash="dash", line_color="black", 
+                      annotation_text="Independencia (FD = 1)")
+        
+        fig.update_layout(
+            title=f'Factores de Dependencia: {item1} vs {item2}',
+            yaxis_title='Factor de Dependencia',
+            font=dict(size=12),
+            height=400,
+            showlegend=False,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
+        
+        return fig
+    
+    except Exception as e:
+        st.error(f"Error creando gráfico de factores de dependencia: {str(e)}")
+        return go.Figure()
+
+def create_all_rules_chart(all_rules):
+    """Crea gráfico con todas las reglas de asociación"""
+    try:
+        rule_names = [rule['rule'].replace(' Entonces ', '→').replace('Si (', '').replace(')', '') for rule in all_rules]
+        confidences = [rule['confidence'] for rule in all_rules]
+        coverages = [rule['coverage'] for rule in all_rules]
+        
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            name='Confianza',
+            x=rule_names,
+            y=confidences,
+            marker_color='#FF6B6B',
+            text=[f'{v:.1%}' for v in confidences],
+            textposition='auto',
+        ))
+        
+        fig.add_trace(go.Bar(
+            name='Cobertura',
+            x=rule_names,
+            y=coverages,
+            marker_color='#4ECDC4',
+            text=[f'{v:.1%}' for v in coverages],
+            textposition='auto',
+        ))
+        
+        fig.update_layout(
+            title='Todas las Reglas de Asociación',
+            xaxis_title='Reglas',
+            yaxis_title='Valor',
+            yaxis=dict(range=[0, 1]),
+            barmode='group',
+            font=dict(size=10),
+            height=500,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            xaxis_tickangle=-45
+        )
+        
+        return fig
+    
+    except Exception as e:
+        st.error(f"Error creando gráfico de todas las reglas: {str(e)}")
+        return go.Figure()
+
 def create_scatter_plot(data, item1, item2):
     """Crea gráfico de dispersión con jitter"""
     try:
-        # Añadir jitter para mejor visualización
-        np.random.seed(42)  # Para reproducibilidad
+        np.random.seed(42)
         x_jitter = data[item1] + np.random.normal(0, 0.05, len(data))
         y_jitter = data[item2] + np.random.normal(0, 0.05, len(data))
         
-        # Crear colores basados en combinaciones
         colors = []
         for _, row in data.iterrows():
             if row[item1] == 1 and row[item2] == 1:
@@ -461,7 +703,6 @@ def create_chi_square_visualization(chi2_stat, critical_values):
         
         fig = go.Figure()
         
-        # Curva de distribución
         fig.add_trace(go.Scatter(
             x=x, y=y,
             mode='lines',
@@ -469,7 +710,6 @@ def create_chi_square_visualization(chi2_stat, critical_values):
             line=dict(color='blue', width=2)
         ))
         
-        # Valor calculado
         if chi2_stat > 0:
             fig.add_vline(
                 x=chi2_stat,
@@ -479,7 +719,6 @@ def create_chi_square_visualization(chi2_stat, critical_values):
                 annotation_position="top"
             )
         
-        # Valores críticos
         colors = ['orange', 'purple', 'green']
         for i, (level, critical) in enumerate(critical_values.items()):
             fig.add_vline(
@@ -547,13 +786,11 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuración")
         
-        # Opción de carga de datos
         data_option = st.radio(
             "Selecciona el método de carga:",
             ["📁 Cargar archivo Excel", "🎲 Generar datos aleatorios", "✏️ Entrada manual"]
         )
         
-        # Botón para limpiar datos
         if st.button("🗑️ Limpiar Datos"):
             st.session_state.data = None
             st.session_state.current_metrics = None
@@ -577,13 +814,11 @@ def main():
                 try:
                     data = pd.read_excel(uploaded_file)
                     
-                    # Validar datos
                     is_valid, message = validate_data(data)
                     if not is_valid:
                         st.error(f"Error en los datos: {message}")
                         return
                     
-                    # Convertir valores no binarios
                     non_binary_cols = []
                     for col in data.columns:
                         unique_vals = data[col].dropna().unique()
@@ -624,19 +859,16 @@ def main():
             with col2:
                 n_instances = st.slider("Número de instancias", 5, 50, 10, key="manual_instances")
             
-            # Inicializar datos en session_state si no existen
             if 'manual_data_initialized' not in st.session_state:
                 st.session_state.manual_data_initialized = False
                 st.session_state.manual_data = None
             
-            # Crear tabla manual
             if st.button("📝 Crear Tabla Manual", key="create_manual_table"):
                 items = [f"Item_{i+1}" for i in range(n_items)]
                 
-                # Inicializar datos vacíos
                 manual_data = []
                 for i in range(n_instances):
-                    row = [0] * n_items  # Inicializar con ceros
+                    row = [0] * n_items
                     manual_data.append(row)
                 
                 st.session_state.manual_data = {
@@ -648,7 +880,6 @@ def main():
                 st.session_state.manual_data_initialized = True
                 st.rerun()
             
-            # Mostrar tabla para edición si está inicializada
             if st.session_state.manual_data_initialized and st.session_state.manual_data:
                 st.subheader("✏️ Editar Datos")
                 
@@ -657,50 +888,42 @@ def main():
                 n_items = manual_info['n_items']
                 n_instances = manual_info['n_instances']
                 
-                # Crear formulario con datos editables
                 with st.form("manual_data_form", clear_on_submit=False):
                     st.write("**Instrucciones:** Selecciona 0 o 1 para cada celda")
                     
-                    # Crear tabla editable
                     updated_data = []
                     
-                    # Encabezados
                     header_cols = st.columns([1] + [1] * n_items)
                     header_cols[0].write("**Instancia**")
                     for j, item in enumerate(items):
                         header_cols[j+1].write(f"**{item}**")
                     
-                    # Filas de datos
                     for i in range(n_instances):
                         cols = st.columns([1] + [1] * n_items)
                         cols[0].write(f"Inst {i+1}")
                         
                         row = []
                         for j in range(n_items):
-                            # Obtener valor actual o usar 0 por defecto
                             current_value = manual_info['data'][i][j] if i < len(manual_info['data']) and j < len(manual_info['data'][i]) else 0
                             
                             value = cols[j+1].selectbox(
                                 f"",
                                 options=[0, 1],
-                                index=current_value,  # Usar valor actual como índice
+                                index=current_value,
                                 key=f"manual_item_{i}_{j}",
                                 label_visibility="collapsed"
                             )
                             row.append(value)
                         updated_data.append(row)
                     
-                    # Botones del formulario
                     col1, col2, col3 = st.columns([1, 1, 1])
                     
                     with col1:
                         if st.form_submit_button("💾 Guardar Datos", type="primary"):
                             try:
-                                # Crear DataFrame
                                 df = pd.DataFrame(updated_data, columns=items)
                                 st.session_state.data = df
                                 
-                                # Limpiar datos manuales
                                 st.session_state.manual_data_initialized = False
                                 st.session_state.manual_data = None
                                 
@@ -713,13 +936,11 @@ def main():
                     with col2:
                         if st.form_submit_button("🎲 Llenar Aleatoriamente"):
                             try:
-                                # Llenar con datos aleatorios
                                 random_data = []
                                 for i in range(n_instances):
                                     row = [random.choice([0, 1]) for _ in range(n_items)]
                                     random_data.append(row)
                                 
-                                # Actualizar session_state
                                 st.session_state.manual_data['data'] = random_data
                                 st.success("🎲 Datos llenados aleatoriamente")
                                 st.rerun()
@@ -732,21 +953,19 @@ def main():
                             st.session_state.manual_data_initialized = False
                             st.session_state.manual_data = None
                             st.rerun()
-            
-            # Mostrar vista previa de los datos actuales
-            if st.session_state.manual_data:
-                st.subheader("👀 Vista Previa")
-                preview_df = pd.DataFrame(
-                    st.session_state.manual_data['data'], 
-                    columns=st.session_state.manual_data['items']
-                )
-                st.dataframe(preview_df, use_container_width=True)
+                
+                if st.session_state.manual_data:
+                    st.subheader("👀 Vista Previa")
+                    preview_df = pd.DataFrame(
+                        st.session_state.manual_data['data'], 
+                        columns=st.session_state.manual_data['items']
+                    )
+                    st.dataframe(preview_df, use_container_width=True)
         
         # Mostrar datos cargados
         if st.session_state.data is not None:
             st.subheader("📋 Datos Cargados")
             
-            # Estadísticas básicas
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("📊 Instancias", len(st.session_state.data))
@@ -757,10 +976,8 @@ def main():
                 density = st.session_state.data.sum().sum() / total_cells if total_cells > 0 else 0
                 st.metric("🎯 Densidad", f"{density:.2%}")
             
-            # Mostrar tabla
             st.dataframe(st.session_state.data, use_container_width=True)
             
-            # Frecuencias por item
             st.subheader("📈 Frecuencias por Item")
             fig = create_frequency_chart(st.session_state.data)
             st.plotly_chart(fig, use_container_width=True)
@@ -771,13 +988,11 @@ def main():
         if st.session_state.data is None:
             st.markdown('<div class="warning-box"><strong>⚠️ Primero debes cargar datos en la pestaña "Carga de Datos"</strong></div>', unsafe_allow_html=True)
         else:
-            # Validar datos antes del análisis
             is_valid, message = validate_data(st.session_state.data)
             if not is_valid:
                 st.error(f"Error en los datos: {message}")
                 return
             
-            # Selección de items
             col1, col2 = st.columns(2)
             
             with col1:
@@ -791,17 +1006,15 @@ def main():
                     return
             
             if st.button("🔍 Analizar Asociación", type="primary"):
-                # Calcular métricas
                 metrics = calculate_metrics(st.session_state.data, item1, item2)
                 
                 if metrics is None:
                     st.error("Error calculando métricas. Verifica los datos.")
                     return
                 
-                # Mostrar tabla de contingencia
+                # Tabla de contingencia
                 st.subheader("📋 Tabla de Contingencia")
                 
-                # Crear tabla más visual
                 cont_display = metrics['contingency'].copy()
                 cont_display.index = [f'{item1}=0', f'{item1}=1', 'Total']
                 cont_display.columns = [f'{item2}=0', f'{item2}=1', 'Total']
@@ -809,7 +1022,7 @@ def main():
                 st.dataframe(cont_display, use_container_width=True)
                 
                 # Métricas principales
-                st.subheader("📊 Métricas de Asociación")
+                st.subheader("📊 Métricas de Asociación Básicas")
                 
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -849,28 +1062,82 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Factor de dependencia
-                st.subheader("🔗 Factor de Dependencia")
+                # Todas las reglas de asociación
+                st.subheader("🔍 Todas las Reglas de Asociación")
                 
-                dep_text = "Asociación Positiva" if metrics['dependency_factor'] > 0 else "Asociación Negativa" if metrics['dependency_factor'] < 0 else "Sin Asociación"
+                rules_data = []
+                for rule in metrics['all_rules']:
+                    rules_data.append({
+                        'Regla': rule['rule'],
+                        'Cobertura (Cb)': f"{rule['coverage']:.1%}",
+                        'Confianza (Cf)': f"{rule['confidence']:.1%}",
+                        'Fórmula': rule['formula']
+                    })
                 
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    st.metric(
-                        "Factor de Dependencia",
-                        f"{metrics['dependency_factor']:.4f}",
-                        delta=dep_text
-                    )
+                rules_df = pd.DataFrame(rules_data)
+                st.dataframe(rules_df, use_container_width=True, hide_index=True)
                 
-                with col2:
-                    st.markdown(f"""
-                    <div class="info-box">
-                        <strong>Interpretación:</strong><br>
-                        • Factor > 0: Los items tienden a aparecer juntos<br>
-                        • Factor < 0: Los items tienden a excluirse mutuamente<br>
-                        • Factor ≈ 0: Los items son independientes
-                    </div>
-                    """, unsafe_allow_html=True)
+                # Factor de dependencia mejorado
+                st.subheader("🔗 Factores de Dependencia")
+                
+                dep_factors = metrics['dependency_factors']
+                
+                # En la sección de Factor de dependencia mejorado, reemplazar la tabla markdown con:
+
+                st.markdown(f"""
+### Tabla de Dependencia
+
+| | **{item2}=1** | **{item2}=0** |
+|---|---|---|
+| **{item1}=1** | {dep_factors['fd_1_1']:.3f} | {dep_factors['fd_1_0']:.3f} |
+| **{item1}=0** | {dep_factors['fd_0_1']:.3f} | {dep_factors['fd_0_0']:.3f} |
+
+**Verificación de cálculos (siguiendo la fórmula de la imagen):**
+
+**FD({item1}=1, {item2}=1):**
+- P({item1}=1 ∩ {item2}=1) = {metrics['a']}/{metrics['n']} = {dep_factors['probabilities']['p_both_1_1']:.3f}
+- P({item1}=1) = {metrics['a']+metrics['b']}/{metrics['n']} = {dep_factors['probabilities']['p_item1_1']:.3f}
+- P({item2}=1) = {metrics['a']+metrics['c']}/{metrics['n']} = {dep_factors['probabilities']['p_item2_1']:.3f}
+- FD = {dep_factors['probabilities']['p_both_1_1']:.3f} / ({dep_factors['probabilities']['p_item1_1']:.3f} × {dep_factors['probabilities']['p_item2_1']:.3f}) = **{dep_factors['fd_1_1']:.3f}**
+
+**FD({item1}=1, {item2}=0):**
+- P({item1}=1 ∩ {item2}=0) = {metrics['b']}/{metrics['n']} = {dep_factors['probabilities']['p_1_0']:.3f}
+- P({item1}=1) = {dep_factors['probabilities']['p_item1_1']:.3f}
+- P({item2}=0) = {dep_factors['probabilities']['p_item2_0']:.3f}
+- FD = {dep_factors['probabilities']['p_1_0']:.3f} / ({dep_factors['probabilities']['p_item1_1']:.3f} × {dep_factors['probabilities']['p_item2_0']:.3f}) = **{dep_factors['fd_1_0']:.3f}**
+
+**FD({item1}=0, {item2}=1):**
+- P({item1}=0 ∩ {item2}=1) = {metrics['c']}/{metrics['n']} = {dep_factors['probabilities']['p_0_1']:.3f}
+- P({item1}=0) = {dep_factors['probabilities']['p_item1_0']:.3f}
+- P({item2}=1) = {dep_factors['probabilities']['p_item2_1']:.3f}
+- FD = {dep_factors['probabilities']['p_0_1']:.3f} / ({dep_factors['probabilities']['p_item1_0']:.3f} × {dep_factors['probabilities']['p_item2_1']:.3f}) = **{dep_factors['fd_0_1']:.3f}**
+
+**FD({item1}=0, {item2}=0):**
+- P({item1}=0 ∩ {item2}=0) = {metrics['d']}/{metrics['n']} = {dep_factors['probabilities']['p_both_0_0']:.3f}
+- P({item1}=0) = {dep_factors['probabilities']['p_item1_0']:.3f}
+- P({item2}=0) = {dep_factors['probabilities']['p_item2_0']:.3f}
+- FD = {dep_factors['probabilities']['p_both_0_0']:.3f} / ({dep_factors['probabilities']['p_item1_0']:.3f} × {dep_factors['probabilities']['p_item2_0']:.3f}) = **{dep_factors['fd_0_0']:.3f}**
+
+**Fórmula general:** FD = P(A∩B) / (P(A) × P(B))
+""")
+                
+                # Interpretaciones contextuales - CORREGIDAS
+                st.subheader("💬 Interpretaciones")
+                
+                for interpretation in metrics['dependency_interpretations']:
+                    st.write(interpretation)
+                
+                # Información sobre factores de dependencia - LIMPIA
+                st.info("""
+                **Cómo interpretar los Factores de Dependencia:**
+                
+                • FD > 1: Asociación positiva (aumenta la probabilidad)
+                • FD < 1: Asociación negativa (disminuye la probabilidad)  
+                • FD ≈ 1: Independencia (no hay asociación)
+                
+                **Ejemplo de interpretación:**
+                Si FD(Pan=1, Mantequilla=0) > 1, significa que "Comprar Pan aumenta la probabilidad de NO comprar Mantequilla"
+                """)
                 
                 # Prueba Chi-cuadrado
                 st.subheader("🧮 Prueba Chi-Cuadrado")
@@ -880,7 +1147,6 @@ def main():
                 with col1:
                     st.metric("Chi-cuadrado calculado", f"{metrics['chi2_stat']:.4f}")
                     
-                    # Mostrar valores críticos
                     st.write("**Valores Críticos:**")
                     for level, critical in metrics['critical_values'].items():
                         is_significant = metrics['chi2_stat'] > critical
@@ -903,7 +1169,7 @@ def main():
                         </div>
                         """, unsafe_allow_html=True)
                 
-                # Guardar métricas en session_state
+                # Guardar métricas
                 st.session_state.current_metrics = metrics
                 st.session_state.current_items = (item1, item2)
     
@@ -916,27 +1182,33 @@ def main():
             metrics = st.session_state.current_metrics
             item1, item2 = st.session_state.current_items
             
+            # Gráfico de factores de dependencia
+            st.subheader("🔗 Factores de Dependencia")
+            fig_dependency = create_dependency_factors_chart(metrics['dependency_factors'], item1, item2)
+            st.plotly_chart(fig_dependency, use_container_width=True)
+            
+            # Gráfico de todas las reglas
+            st.subheader("📊 Todas las Reglas de Asociación")
+            fig_all_rules = create_all_rules_chart(metrics['all_rules'])
+            st.plotly_chart(fig_all_rules, use_container_width=True)
+            
             # Gráficos en dos columnas
             col1, col2 = st.columns(2)
             
             with col1:
-                # Heatmap de contingencia
                 st.subheader("🔥 Tabla de Contingencia")
                 fig1 = create_contingency_heatmap(metrics['contingency'], item1, item2)
                 st.plotly_chart(fig1, use_container_width=True)
                 
-                # Gráfico de métricas
-                st.subheader("📊 Métricas")
+                st.subheader("📊 Métricas Básicas")
                 fig2 = create_metrics_chart(metrics, item1, item2)
                 st.plotly_chart(fig2, use_container_width=True)
             
             with col2:
-                # Gráfico de dispersión
                 st.subheader("🎯 Distribución")
                 fig3 = create_scatter_plot(st.session_state.data, item1, item2)
                 st.plotly_chart(fig3, use_container_width=True)
                 
-                # Visualización Chi-cuadrado
                 st.subheader("📈 Chi-Cuadrado")
                 fig4 = create_chi_square_visualization(metrics['chi2_stat'], metrics['critical_values'])
                 st.plotly_chart(fig4, use_container_width=True)
@@ -950,7 +1222,6 @@ def main():
             metrics = st.session_state.current_metrics
             item1, item2 = st.session_state.current_items
             
-            # Generar reporte
             st.subheader(f"📄 Reporte de Análisis: {item1} vs {item2}")
             
             # Resumen ejecutivo
@@ -961,11 +1232,15 @@ def main():
             
             **Tamaño de la Muestra:** {metrics['n']} transacciones
             
-            **Reglas de Asociación:**
+            **Reglas de Asociación Principales:**
             - {item1} → {item2}: Confianza = {metrics['conf_1_to_2']:.3f}, Cobertura = {metrics['cov_1']:.3f}
             - {item2} → {item1}: Confianza = {metrics['conf_2_to_1']:.3f}, Cobertura = {metrics['cov_2']:.3f}
             
-            **Factor de Dependencia:** {metrics['dependency_factor']:.4f}
+            **Factores de Dependencia:**
+            - FD({item1}=1, {item2}=1) = {metrics['dependency_factors']['fd_1_1']:.3f}
+            - FD({item1}=1, {item2}=0) = {metrics['dependency_factors']['fd_1_0']:.3f}
+            - FD({item1}=0, {item2}=1) = {metrics['dependency_factors']['fd_0_1']:.3f}
+            - FD({item1}=0, {item2}=0) = {metrics['dependency_factors']['fd_0_0']:.3f}
             
             **Significancia Estadística:** {'Sí' if metrics['significance'] else 'No'}
             {f"(Niveles: {', '.join(metrics['significance'])})" if metrics['significance'] else ""}
@@ -986,12 +1261,43 @@ def main():
             
             st.markdown(detailed_table)
             
+            # Análisis completo de factores de dependencia
+            st.markdown("### 🔗 Análisis Completo de Factores de Dependencia")
+            
+            st.markdown("**Fórmula utilizada:** FD = P(A∩B) / (P(A) × P(B))")
+            
+            dep_factors = metrics['dependency_factors']
+            
+            st.markdown(f"""
+            **Cálculos detallados:**
+            
+            1. **FD({item1}=1, {item2}=1)** = {dep_factors['formulas']['fd_1_1_formula']} = **{dep_factors['fd_1_1']:.3f}**
+            2. **FD({item1}=1, {item2}=0)** = {dep_factors['formulas']['fd_1_0_formula']} = **{dep_factors['fd_1_0']:.3f}**
+            3. **FD({item1}=0, {item2}=1)** = {dep_factors['formulas']['fd_0_1_formula']} = **{dep_factors['fd_0_1']:.3f}**
+            4. **FD({item1}=0, {item2}=0)** = {dep_factors['formulas']['fd_0_0_formula']} = **{dep_factors['fd_0_0']:.3f}**
+            """)
+            
+            # Análisis completo de reglas
+            st.markdown("### 🔍 Análisis Completo de Reglas")
+            
+            st.markdown("**Todas las reglas de asociación calculadas:**")
+            
+            for i, rule in enumerate(metrics['all_rules'], 1):
+                st.markdown(f"""
+                **{i}.** {rule['rule']}
+                - Cobertura = {rule['coverage']:.1%}
+                - Confianza = {rule['confidence']:.1%} {rule['formula']}
+                """)
+            
             # Interpretación
             st.markdown("### 🔍 Interpretación de Resultados")
             
+            st.markdown("**Interpretaciones de los Factores de Dependencia:**")
+            for interpretation in metrics['dependency_interpretations']:
+                st.markdown(interpretation)
+            
             interpretation = []
             
-            # Confianza
             if metrics['conf_1_to_2'] > 0.7:
                 interpretation.append(f"✅ **Alta confianza** en la regla {item1} → {item2} ({metrics['conf_1_to_2']:.1%})")
             elif metrics['conf_1_to_2'] > 0.5:
@@ -1007,16 +1313,7 @@ def main():
             else:
                 interpretation.append(f"❌ **Baja cobertura** del item {item1} ({metrics['cov_1']:.1%})")
             
-            # Dependencia
-            if abs(metrics['dependency_factor']) > 0.5:
-                dep_type = "fuerte" if metrics['dependency_factor'] > 0 else "fuerte negativa"
-                interpretation.append(f"✅ **Dependencia {dep_type}** entre los items")
-            elif abs(metrics['dependency_factor']) > 0.2:
-                dep_type = "moderada" if metrics['dependency_factor'] > 0 else "moderada negativa"
-                interpretation.append(f"⚠️ **Dependencia {dep_type}** entre los items")
-            else:
-                interpretation.append(f"❌ **Dependencia débil** entre los items")
-            
+            st.markdown("**Interpretaciones adicionales:**")
             for interp in interpretation:
                 st.markdown(interp)
             
@@ -1034,8 +1331,12 @@ def main():
             if not metrics['significance']:
                 recommendations.append(f"🔍 Los items {item1} y {item2} parecen ser independientes, considerar otros pares de items")
             
-            if metrics['dependency_factor'] < -0.3:
-                recommendations.append(f"⚠️ Los items {item1} y {item2} tienden a excluirse mutuamente")
+            # Recomendaciones basadas en factores de dependencia
+            if dep_factors['fd_1_1'] > 1.2:
+                recommendations.append(f"✅ **Estrategia de venta cruzada:** Promover {item2} cuando se compre {item1}")
+            
+            if dep_factors['fd_1_0'] > 1.2:
+                recommendations.append(f"⚠️ **Productos sustitutos:** {item1} y {item2} pueden ser sustitutos, considerar estrategias diferenciadas")
             
             if not recommendations:
                 recommendations.append("📝 Analizar más pares de items para encontrar asociaciones significativas")
@@ -1049,8 +1350,21 @@ def main():
             **Cómo interpretar las métricas:**
             - **Confianza**: Probabilidad de que ocurra B dado que ocurrió A
             - **Cobertura**: Frecuencia relativa del item en el dataset
-            - **Factor de Dependencia**: Medida de asociación entre items
+            - **Factor de Dependencia**: FD = P(A∩B) / (P(A) × P(B))
+              - FD > 1: Asociación positiva
+              - FD < 1: Asociación negativa  
+              - FD ≈ 1: Independencia
             - **Chi-cuadrado**: Prueba de independencia estadística
+            
+            **Interpretación de las 8 reglas:**
+            - Las reglas muestran todas las combinaciones posibles entre los items
+            - Cada regla tiene su propia cobertura y confianza
+            - Las reglas complementarias suman 100% en confianza para cada antecedente
+            
+            **Interpretación de los 4 Factores de Dependencia:**
+            - Muestran cómo cada combinación de valores afecta la probabilidad
+            - Permiten identificar patrones de compra y sustitución
+            - Son útiles para estrategias de marketing y gestión de inventario
             """)
 
 if __name__ == "__main__":
