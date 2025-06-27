@@ -169,11 +169,11 @@ def calculate_dependency_factors(a, b, c, d, n):
     """
     Calcula los 4 factores de dependencia usando la fórmula: FD = P(A∩B) / (P(A) × P(B))
     
-    Tabla de contingencia:
-                Item2=0    Item2=1    Total
-    Item1=0        d         c        c+d
-    Item1=1        b         a        a+b
-    Total        b+d       a+c        n
+    Tabla de contingencia CORREGIDA:
+                Item2=1    Item2=0    Total
+    Item1=1        a         b        a+b
+    Item1=0        c         d        c+d
+    Total        a+c       b+d        n
     
     Donde:
     - a = Item1=1 ∩ Item2=1
@@ -201,7 +201,6 @@ def calculate_dependency_factors(a, b, c, d, n):
     p_both_0_0 = d / n   # P(Item1=0 ∩ Item2=0)
     
     # Calcular factores de dependencia: FD = P(A∩B) / (P(A) × P(B))
-    # CORRECCIÓN: Usar exactamente la fórmula de la imagen
     fd_1_1 = p_both_1_1 / (p_item1_1 * p_item2_1) if (p_item1_1 * p_item2_1) > 0 else 0
     fd_1_0 = p_1_0 / (p_item1_1 * p_item2_0) if (p_item1_1 * p_item2_0) > 0 else 0
     fd_0_1 = p_0_1 / (p_item1_0 * p_item2_1) if (p_item1_0 * p_item2_1) > 0 else 0
@@ -287,33 +286,35 @@ def interpret_dependency_factors(fd_results, item1, item2):
     return interpretations
 
 def calculate_metrics(data, item1, item2):
-    """Calcula todas las métricas de asociación con manejo de errores"""
+    """Calcula todas las métricas de asociación con manejo de errores - CORREGIDO"""
     try:
-        # Crear tabla de contingencia
+        # CORRECCIÓN: Crear tabla de contingencia con el orden correcto
+        # item1 en filas, item2 en columnas
         contingency = pd.crosstab(data[item1], data[item2], margins=True)
         
-        # Verificar que la tabla tiene el formato esperado
-        if contingency.shape[0] < 3 or contingency.shape[1] < 3:
-            # Crear tabla completa con ceros si faltan categorías
-            full_contingency = pd.DataFrame(
-                [[0, 0, 0], [0, 0, 0], [0, 0, 0]], 
-                index=[0, 1, 'All'], 
-                columns=[0, 1, 'All']
-            )
-            
-            for i in contingency.index:
-                for j in contingency.columns:
-                    if i in full_contingency.index and j in full_contingency.columns:
-                        full_contingency.loc[i, j] = contingency.loc[i, j]
-            
-            contingency = full_contingency
+        # Asegurar que tenemos todas las categorías (0 y 1)
+        for val in [0, 1]:
+            if val not in contingency.index:
+                contingency.loc[val] = 0
+            if val not in contingency.columns:
+                contingency[val] = 0
         
-        # Extraer valores de forma segura
-        a = contingency.iloc[1, 1] if contingency.shape[0] > 1 and contingency.shape[1] > 1 else 0
-        b = contingency.iloc[1, 0] if contingency.shape[0] > 1 else 0
-        c = contingency.iloc[0, 1] if contingency.shape[1] > 1 else 0
-        d = contingency.iloc[0, 0] if contingency.shape[0] > 0 else 0
-        n = contingency.iloc[-1, -1]
+        # Reordenar para mostrar 1 primero, luego 0
+        contingency = contingency.reindex([1, 0, 'All'])
+        contingency = contingency.reindex(columns=[1, 0, 'All'])
+        
+        # Recalcular totales después del reordenamiento
+        for i in [1, 0]:
+            contingency.loc[i, 'All'] = contingency.loc[i, 1] + contingency.loc[i, 0]
+            contingency.loc['All', i] = contingency.loc[1, i] + contingency.loc[0, i]
+        contingency.loc['All', 'All'] = contingency.loc[1, 'All'] + contingency.loc[0, 'All']
+        
+        # Extraer valores CORRECTOS según la tabla estándar
+        a = contingency.loc[1, 1]  # Item1=1, Item2=1 (celda superior izquierda)
+        b = contingency.loc[1, 0]  # Item1=1, Item2=0 (celda superior derecha)
+        c = contingency.loc[0, 1]  # Item1=0, Item2=1 (celda inferior izquierda)
+        d = contingency.loc[0, 0]  # Item1=0, Item2=0 (celda inferior derecha)
+        n = contingency.loc['All', 'All']
         
         # Calcular métricas básicas
         conf_1_to_2 = a / (a + b) if (a + b) > 0 else 0
@@ -475,8 +476,8 @@ def create_contingency_heatmap(contingency_table, item1, item2):
         
         fig = go.Figure(data=go.Heatmap(
             z=data_matrix,
-            x=[f'{item2}=0', f'{item2}=1'],
-            y=[f'{item1}=0', f'{item1}=1'],
+            x=[f'{item2}=1', f'{item2}=0'],
+            y=[f'{item1}=1', f'{item1}=0'],
             colorscale='Blues',
             text=data_matrix,
             texttemplate="%{text}",
@@ -1014,11 +1015,11 @@ def main():
                 
                 # Tabla de contingencia
                 st.subheader("📋 Tabla de Contingencia")
-                
+
                 cont_display = metrics['contingency'].copy()
-                cont_display.index = [f'{item1}=0', f'{item1}=1', 'Total']
-                cont_display.columns = [f'{item2}=0', f'{item2}=1', 'Total']
-                
+                cont_display.index = [f'{item1}=1', f'{item1}=0', 'Total']
+                cont_display.columns = [f'{item2}=1', f'{item2}=0', 'Total']
+
                 st.dataframe(cont_display, use_container_width=True)
                 
                 # Métricas principales
@@ -1250,16 +1251,36 @@ def main():
             
             # Tabla de contingencia detallada
             st.markdown("### 📊 Tabla de Contingencia Detallada")
-            
+
             detailed_table = f"""
-            |               | {item2}=0 | {item2}=1 | Total |
-            |---------------|-----------|-----------|-------|
-            | **{item1}=0** | {metrics['d']}        | {metrics['c']}        | {metrics['c']+metrics['d']}    |
-            | **{item1}=1** | {metrics['b']}        | {metrics['a']}        | {metrics['a']+metrics['b']}    |
-            | **Total**     | {metrics['b']+metrics['d']}        | {metrics['a']+metrics['c']}        | {metrics['n']}    |
-            """
-            
+|               | {item2}=1 | {item2}=0 | Total |
+|---------------|-----------|-----------|-------|
+| **{item1}=1** | {metrics['a']}        | {metrics['b']}        | {metrics['a']+metrics['b']}    |
+| **{item1}=0** | {metrics['c']}        | {metrics['d']}        | {metrics['c']+metrics['d']}    |
+| **Total**     | {metrics['a']+metrics['c']}        | {metrics['b']+metrics['d']}        | {metrics['n']}    |
+"""
+
             st.markdown(detailed_table)
+
+            # Verificación de factores de dependencia con la nueva tabla
+            st.markdown("### 🔍 Verificación de Factores de Dependencia")
+
+            st.markdown(f"""
+**Mapeo de la tabla de contingencia:**
+
+|               | **{item2}=1** | **{item2}=0** |
+|---------------|---------------|---------------|
+| **{item1}=1** | a = {metrics['a']} | b = {metrics['b']} |
+| **{item1}=0** | c = {metrics['c']} | d = {metrics['d']} |
+
+**Donde:**
+- **a** = Ambos items = 1 (celda superior izquierda)
+- **b** = {item1}=1, {item2}=0 (celda superior derecha)  
+- **c** = {item1}=0, {item2}=1 (celda inferior izquierda)
+- **d** = Ambos items = 0 (celda inferior derecha)
+
+**Total de transacciones:** n = {metrics['n']}
+""")
             
             # Análisis completo de factores de dependencia
             st.markdown("### 🔗 Análisis Completo de Factores de Dependencia")
