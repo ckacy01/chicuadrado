@@ -33,3 +33,42 @@ Una aplicación web moderna y completa para análisis de reglas de asociación d
 - **Análisis Paso a Paso**: Cálculos detallados con fórmulas explicadas
 - **Interpretaciones Contextuales**: Recomendaciones automáticas basadas en resultados
 - **Documentación Completa**: Explicación de metodología y métricas
+
+## 📊 Uso de la Aplicación
+
+### 1. Carga de Datos
+- **Excel**: Sube archivos .xlsx/.xls con datos binarios
+- **Aleatorio**: Genera datos de ejemplo con correlaciones
+- **Manual**: Crea tabla personalizada
+
+### 2. Análisis
+- Selecciona 2 items para analizar
+- Obtén tabla de contingencia automáticamente
+- Revisa métricas: confianza, cobertura, factor de dependencia
+- Verifica significancia estadística (Chi-cuadrado)
+
+### 3. Visualizaciones
+- Heatmap de tabla de contingencia
+- Gráfico de métricas comparativas
+- Dispersión de datos con jitter
+- Distribución Chi-cuadrado
+
+### 4. Reporte
+- Resumen ejecutivo completo
+- Interpretación automática de resultados
+- Recomendaciones basadas en análisis
+
+## 🎯 Casos de Uso
+
+- Análisis de cesta de mercado
+- Recomendaciones de productos
+- Estudios de correlación
+- Investigación de patrones de comportamiento
+
+## 🛠️ Tecnologías
+
+- **Streamlit**: Framework web para Python
+- **Pandas**: Manipulación de datos
+- **NumPy**: Cálculos numéricos
+- **Plotly**: Visualizaciones interactivas
+- **SciPy**: Estadísticas y pruebas
