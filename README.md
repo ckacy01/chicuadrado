@@ -243,3 +243,6 @@ Es la función principal. Organiza la estructura de toda la aplicación:
   - Y ya despues usa el comando ```source ulesvenv/bin/activate```
 
 - Una vez con el entorno virtual activo **Ejecutar el siguiente comando desde terminal:** ``` python3 run_local.py ```
+
+Created by **Equipo 2 - 9-2 **
+Universidad Politécnica de Sinaloa
